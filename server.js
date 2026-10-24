@@ -13,7 +13,6 @@ try {
   }
 } catch (e) {}
 
-const url = require('url');
 const ROOT = __dirname;
 const crypto = require('crypto');
 
@@ -75,21 +74,23 @@ function writeOrders(o) {
 }
 
 const server = http.createServer((req, res) => {
-  const parsed = url.parse(req.url, true);
-  const pathname = parsed.pathname;
+  // Use WHATWG URL API to eliminate deprecation warning
+  const host = req.headers.host || 'localhost';
+  const parsedUrl = new URL(req.url, `http://${host}`);
+  const pathname = parsedUrl.pathname;
 
   // ===== Global CORS Handling =====
   const origin = req.headers.origin;
   const allowed = [
     'http://localhost:3000',
-    'https://ownerkebabbaro.a72830750.workers.dev', // Hardcoded owner domain
-    'https://customerkebabbaro.a72830750.workers.dev', // Hardcoded customer domain
+    'https://ownerkebabbaro.a72830750.workers.dev',    // Owner site
+    'https://customerkebabbaro.a72830750.workers.dev', // Customer site
     ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
     process.env.CUSTOMER_FRONTEND_URL,
     process.env.OWNER_FRONTEND_URL
   ].map(x => x && x.trim().replace(/\/$/, '')).filter(Boolean);
 
-  if (origin && (allowed.includes(origin) || true)) { // Allow request origin
+  if (origin && (allowed.includes(origin) || true)) { 
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS, PUT, DELETE');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -234,4 +235,4 @@ const server = http.createServer((req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server on http://localhost:${PORT}`));
