@@ -83,6 +83,7 @@ const server = http.createServer((req, res) => {
   const allowed = [
     'http://localhost:3000',
     'https://ownerkebabbaro.a72830750.workers.dev', // Hardcoded owner domain
+    'https://customerkebabbaro.a72830750.workers.dev', // Hardcoded customer domain
     ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
     process.env.CUSTOMER_FRONTEND_URL,
     process.env.OWNER_FRONTEND_URL
