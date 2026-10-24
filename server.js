@@ -84,7 +84,7 @@ const server = http.createServer((req, res) => {
   const allowed = [
     'http://localhost:3000',
     'https://ownerkebabbaro.a72830750.workers.dev',    // Owner site
-    'https://customerkebabbaro.a72830750.workers.dev', // Customer site
+    'https://customer-kebab.a72830750.workers.dev',    // Correct customer site
     ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
     process.env.CUSTOMER_FRONTEND_URL,
     process.env.OWNER_FRONTEND_URL
