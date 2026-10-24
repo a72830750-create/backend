@@ -191,6 +191,15 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // Clear all orders
+  if (pathname === '/api/orders' && req.method === 'DELETE') {
+    if (!auth(req, res)) return;
+    writeOrders([]);
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ ok: true }));
+    return;
+  }
+
   // Update Order Status
   const m = pathname.match(/^\/api\/orders\/(\d+)$/);
   if (m && req.method === 'PATCH') {
