@@ -38,9 +38,37 @@ const MIME = { '.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-
 function readOrders(){ try{return JSON.parse(fs.readFileSync(ORDERS_FILE,'utf8'));}catch(e){return [];} }
 function writeOrders(o){ fs.writeFileSync(ORDERS_FILE, JSON.stringify(o,null,2)); }
 
+// Helper function to set CORS headers dynamically
+function setCorsHeaders(req, res) {
+  const origin = req.headers.origin;
+  const allowed = [
+    'http://localhost:3000',
+    ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
+    process.env.CUSTOMER_FRONTEND_URL,
+    process.env.OWNER_FRONTEND_URL
+  ].map(x => x && x.trim()).filter(Boolean);
+  
+  if (allowed.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+}
+
 const server = http.createServer((req,res)=>{
   const parsed = url.parse(req.url,true);
   const pathname = parsed.pathname;
+
+  // Set CORS headers for all /api/ routes automatically
+  if (pathname.startsWith('/api/')) {
+    setCorsHeaders(req, res);
+  }
+
+  // Handle preflight OPTIONS requests immediately
+  if (req.method === 'OPTIONS') {
+    setCorsHeaders(req, res);
+    return res.end();
+  }
 
   // Login
   if (pathname === '/api/login' && req.method === 'POST') {
@@ -77,26 +105,10 @@ const server = http.createServer((req,res)=>{
   if (pathname === '/api/orders' && req.method === 'GET') {
     if (!auth(req,res)) return;
     res.setHeader('Content-Type','application/json');
-    const origin = req.headers.origin;
-    const allowed = [
-      'http://localhost:3000',
-      ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
-      process.env.CUSTOMER_FRONTEND_URL,
-      process.env.OWNER_FRONTEND_URL
-    ].map(x => x && x.trim()).filter(Boolean);
-    if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
     return res.end(JSON.stringify(readOrders()));
   }
   if (pathname === '/api/orders' && req.method === 'POST') {
     res.setHeader('Content-Type','application/json');
-    const origin = req.headers.origin;
-    const allowed = [
-      'http://localhost:3000',
-      ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
-      process.env.CUSTOMER_FRONTEND_URL,
-      process.env.OWNER_FRONTEND_URL
-    ].map(x => x && x.trim()).filter(Boolean);
-    if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
     // customer order submission remains open
     let body=''; let tooBig=false; req.on('data',c=>{ if (tooBig) return; body+=c; if (body.length > 1e6) { tooBig=true; } }); req.on('end',()=>{ if (tooBig) { res.statusCode=413; res.end('Payload too large'); return; }
       let order;
@@ -137,30 +149,9 @@ const server = http.createServer((req,res)=>{
       if (o) o.status = status;
       writeOrders(orders);
       res.setHeader('Content-Type','application/json');
-      const origin = req.headers.origin;
-    const allowed = [
-      'http://localhost:3000',
-      ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
-      process.env.CUSTOMER_FRONTEND_URL,
-      process.env.OWNER_FRONTEND_URL
-    ].map(x => x && x.trim()).filter(Boolean);
-    if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
       res.end(JSON.stringify(o||{}));
     });
     return;
-  }
-  if (req.method === 'OPTIONS') {
-    const origin = req.headers.origin;
-    const allowed = [
-      'http://localhost:3000',
-      ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : []),
-      process.env.CUSTOMER_FRONTEND_URL,
-      process.env.OWNER_FRONTEND_URL
-    ].map(x => x && x.trim()).filter(Boolean);
-    if (allowed.includes(origin)) res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Methods','GET,POST,PATCH,OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers','Content-Type');
-    return res.end();
   }
 
   // Static
