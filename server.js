@@ -114,7 +114,7 @@ const server = http.createServer(async (req, res) => {
           res.setHeader('Content-Type', 'application/json');
           res.statusCode = 201;
           res.end(JSON.stringify(Array.isArray(inserted) ? inserted[0] : inserted));
-        } catch (e) { res.statusCode = 400; res.end('Bad request'); }
+        } catch (e) { res.statusCode = 400; res.end(JSON.stringify({ error: String(e.message || e) })); }
       });
       return;
     }
