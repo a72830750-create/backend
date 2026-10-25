@@ -1,73 +1,82 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Safely retrieve, clean, and validate environment variables
-const rawUrl = process.env.SUPABASE_URL ? process.env.SUPABASE_URL.trim() : '';
-const SUPABASE_URL = (rawUrl && rawUrl.startsWith('http')) 
-  ? rawUrl 
-  : 'https://kdreucrxnjyvojayrfmh.supabase.co';
-
-const rawKey = process.env.SUPABASE_KEY ? process.env.SUPABASE_KEY.trim() : '';
-const SUPABASE_KEY = rawKey || 'sb_publishable_qX8hazONOVQvuWurUIWFwg_SHTomBzm';
-
-// Initialize Supabase Client
+const SUPABASE_URL = (process.env.SUPABASE_URL || 'https://kdreucrxnjyvojayrfmh.supabase.co').trim();
+const SUPABASE_KEY = (process.env.SUPABASE_KEY || 'sb_publishable_qX8hazONOVQvuWurUIWFwg_SHTomBzm').trim();
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// GET /api/orders - Fetch all orders from Supabase
-app.get('/api/orders', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
+const PASSWORD_HASH = process.env.ADMIN_PASSWORD_HASH || '';
+const TOKEN_SECRET = process.env.TOKEN_SECRET || '';
+const validTokens = new Map();
 
-    if (error) throw error;
-    res.json(data);
-  } catch (err) {
-    console.error('Error fetching orders:', err);
-    res.status(500).json({ error: 'Failed to load orders' });
+function verifyPassword(pw) {
+  const [salt, hash] = PASSWORD_HASH.split(':');
+  if (!salt || !hash) return false;
+  const h = crypto.scryptSync(pw, salt, 64).toString('hex');
+  return crypto.timingSafeEqual(Buffer.from(h, 'hex'), Buffer.from(hash, 'hex'));
+}
+
+function auth(req, res, next) {
+  const h = req.headers.authorization || '';
+  const t = h.startsWith('Bearer ') ? h.slice(7) : '';
+  const exp = validTokens.get(t);
+  if (!exp || Date.now() > exp) { validTokens.delete(t); return res.status(401).send('Unauthorized'); }
+  next();
+}
+
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body || {};
+  if (username === 'alikebab' && verifyPassword(password)) {
+    const token = crypto.randomBytes(32).toString('hex');
+    validTokens.set(token, Date.now() + 3600000);
+    return res.json({ token });
   }
+  res.status(401).send('Unauthorized');
 });
 
-// POST /api/orders - Insert a new order into Supabase
+app.post('/api/logout', auth, (req, res) => {
+  const h = req.headers.authorization || '';
+  validTokens.delete(h.startsWith('Bearer ') ? h.slice(7) : '');
+  res.json({ ok: true });
+});
+
+app.get('/api/orders', auth, async (req, res) => {
+  const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data || []);
+});
+
 app.post('/api/orders', async (req, res) => {
-  try {
-    const newOrder = req.body;
-
-    const { data, error } = await supabase
-      .from('orders')
-      .insert([
-        {
-          order_number: newOrder.order_number,
-          customer_name: newOrder.customer_name,
-          customer_phone: newOrder.customer_phone || null,
-          delivery_address: newOrder.delivery_address || null,
-          delivery_fee: newOrder.delivery_fee || 0,
-          order_type: newOrder.order_type,
-          items: newOrder.items,
-          subtotal: newOrder.subtotal || null,
-          total_price: newOrder.total_price || newOrder.total || 0,
-          status: newOrder.status || 'new',
-          notes: newOrder.notes || null
-        }
-      ])
-      .select();
-
-    if (error) throw error;
-    res.status(201).json({ success: true, order: data[0] });
-  } catch (err) {
-    console.error('Error creating order:', err);
-    res.status(500).json({ error: 'Failed to save order' });
-  }
+  const o = req.body || {};
+  const { data, error } = await supabase.from('orders').insert([{
+    order_number: o.order_number,
+    customer_name: o.customer_name,
+    customer_phone: o.customer_phone || null,
+    order_type: o.order_type,
+    delivery_address: o.delivery_address || null,
+    items: o.items,
+    subtotal: o.subtotal || null,
+    total: o.total || o.total_price || 0,
+    status: o.status || 'new',
+    notes: o.notes || null
+  }]).select();
+  if (error) return res.status(400).json({ error: error.message });
+  res.status(201).json({ success: true, order: (data || [])[0] });
 });
 
-// Start the server
+app.patch('/api/orders/:id', auth, async (req, res) => {
+  const { status } = req.body || {};
+  if (!['new','accepted','rejected','completed'].includes(status)) return res.status(400).send('Invalid status');
+  const { data, error } = await supabase.from('orders').update({ status }).eq('id', req.params.id).select();
+  if (error) return res.status(400).json({ error: error.message });
+  res.json((data || [])[0] || { ok: true });
+});
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
