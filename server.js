@@ -6,8 +6,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize Supabase with your URL and Publishable Key
-const SUPABASE_URL = process.env.SUPABASE_URL || 'YOUR_SUPABASE_PROJECT_URL';
+// Initialize Supabase
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kdreucrxnjyvojayrfmh.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_qX8hazONOVQvuWurUIWFwg_SHTomBzm';
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
