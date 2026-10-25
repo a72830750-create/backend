@@ -6,10 +6,16 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Initialize Supabase
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://kdreucrxnjyvojayrfmh.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_qX8hazONOVQvuWurUIWFwg_SHTomBzm';
+// 1. Safely retrieve, clean, and validate environment variables
+const rawUrl = process.env.SUPABASE_URL ? process.env.SUPABASE_URL.trim() : '';
+const SUPABASE_URL = (rawUrl && rawUrl.startsWith('http')) 
+  ? rawUrl 
+  : 'https://kdreucrxnjyvojayrfmh.supabase.co';
 
+const rawKey = process.env.SUPABASE_KEY ? process.env.SUPABASE_KEY.trim() : '';
+const SUPABASE_KEY = rawKey || 'sb_publishable_qX8hazONOVQvuWurUIWFwg_SHTomBzm';
+
+// 2. Initialize Supabase Client
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // GET /api/orders - Fetch all orders from Supabase
@@ -54,6 +60,7 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
+// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
