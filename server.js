@@ -52,10 +52,14 @@ app.get('/api/orders', auth, async (req, res) => {
   res.json(data || []);
 });
 
+app.get('/api/orders/lookup/:number', async (req, res) => {
+  const { data, error } = await supabase.from('orders').select('order_number,status,customer_name,created_at').eq('order_number', req.params.number).single();
+  if (error) return res.status(404).json({ error: 'Not found' });
+  res.json(data);
+});
+
 app.post('/api/orders', async (req, res) => {
   const o = req.body || {};
-  const { data: settings } = await supabase.from('settings').select('value').eq('key', 'accepting_orders').single();
-  if (settings && settings.value === 'false') return res.status(403).json({ error: 'Orders closed' });
   const { data, error } = await supabase.from('orders').insert([{
     order_number: o.order_number,
     customer_name: o.customer_name,
@@ -100,4 +104,4 @@ app.patch('/api/settings', auth, async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 EOF
-cd /Users/jamesjackson/forno99-shared && git add server.js && git commit -m "Add accepting_orders setting endpoints" && git push origin main 2>&1 | tail -5
+cd /Users/jamesjackson/forno99-shared && git add server.js && git commit -m "Add public order lookup endpoint" && git push origin main 2>&1 | tail -5
