@@ -54,6 +54,8 @@ app.get('/api/orders', auth, async (req, res) => {
 
 app.post('/api/orders', async (req, res) => {
   const o = req.body || {};
+  const { data: settings } = await supabase.from('settings').select('value').eq('key', 'accepting_orders').single();
+  if (settings && settings.value === 'false') return res.status(403).json({ error: 'Orders closed' });
   const { data, error } = await supabase.from('orders').insert([{
     order_number: o.order_number,
     customer_name: o.customer_name,
@@ -82,5 +84,20 @@ app.patch('/api/orders/:id', auth, async (req, res) => {
   res.json((data || [])[0] || { ok: true });
 });
 
+app.get('/api/settings', async (req, res) => {
+  const { data } = await supabase.from('settings').select('*');
+  const obj = {};
+  (data || []).forEach(r => obj[r.key] = r.value);
+  res.json(obj);
+});
+
+app.patch('/api/settings', auth, async (req, res) => {
+  const { key, value } = req.body || {};
+  await supabase.from('settings').upsert({ key, value });
+  res.json({ ok: true });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+EOF
+cd /Users/jamesjackson/forno99-shared && git add server.js && git commit -m "Add accepting_orders setting endpoints" && git push origin main 2>&1 | tail -5
