@@ -82,7 +82,7 @@ app.post('/api/orders', async (req, res) => {
 
 app.patch('/api/orders/:id', auth, async (req, res) => {
   const { status } = req.body || {};
-  if (!['new','accepted','rejected','completed'].includes(status)) return res.status(400).send('Invalid status');
+  if (!['new','accepted','preparing','ready','out_for_delivery','completed','rejected'].includes(status)) return res.status(400).send('Invalid status');
   const { data, error } = await supabase.from('orders').update({ status }).eq('id', req.params.id).select();
   if (error) return res.status(400).json({ error: error.message });
   res.json((data || [])[0] || { ok: true });
