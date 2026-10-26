@@ -103,5 +103,3 @@ app.patch('/api/settings', auth, async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-EOF
-cd /Users/jamesjackson/forno99-shared && git add server.js && git commit -m "Add public order lookup endpoint" && git push origin main 2>&1 | tail -5
