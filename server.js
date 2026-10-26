@@ -64,7 +64,11 @@ app.post('/api/orders', async (req, res) => {
     subtotal: o.subtotal || null,
     total: o.total || o.total_price || 0,
     status: o.status || 'new',
-    notes: o.notes || null
+    notes: o.notes || null,
+    delivery_fee: o.delivery_fee || 0,
+    delivery_timing: o.delivery_timing || null,
+    delivery_time: o.delivery_time || null,
+    pickup_time: o.pickup_time || null
   }]).select();
   if (error) return res.status(400).json({ error: error.message });
   res.status(201).json({ success: true, order: (data || [])[0] });
@@ -80,3 +84,18 @@ app.patch('/api/orders/:id', auth, async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+EOF
+cd /Users/jamesjackson/forno99-shared && cat > package.json << 'EOF'
+{
+  "name": "forno99-backend",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
+EOF
+git add server.js package.json && git commit -m "Use Express Supabase backend with timing fields" && git push origin main 2>&1 | tail -10
