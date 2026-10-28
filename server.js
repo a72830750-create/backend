@@ -32,7 +32,7 @@ function auth(req, res, next) {
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body || {};
-  if (username === 'faridkebab' && verifyPassword(password)) {
+  if (username === 'alikebab' && verifyPassword(password)) {
     const token = crypto.randomBytes(32).toString('hex');
     validTokens.set(token, Date.now() + 3600000);
     return res.json({ token });
